@@ -44,21 +44,28 @@
         </div>
       </div>
 
-      <div class="hero">
+      <div class="stage">
+        <div class="side">
+          <button class="rbtn r-orange" id="tile-daily"><span class="orb" data-icon="cal"></span><span class="rlabel" data-i18n="dailyShort">Challenge</span><span class="badge" id="daily-badge">!</span></button>
+          <button class="rbtn r-violet" id="tile-wheel"><span class="orb" data-icon="wheel"></span><span class="rlabel" data-i18n="wheelShort">Wheel</span><span class="badge" id="wheel-badge">1</span></button>
+        </div>
         <canvas id="hero" aria-hidden="true"></canvas>
+        <div class="side">
+          <button class="rbtn r-pink" id="tile-shop"><span class="orb" data-icon="bag"></span><span class="rlabel" data-i18n="shopTitle">Shop</span></button>
+          <button class="rbtn r-blue" id="tile-levels"><span class="orb" data-icon="grid"></span><span class="rlabel" data-i18n="levelsTitle">Levels</span></button>
+        </div>
+      </div>
+
+      <div class="title-block">
         <h1 class="logo" data-i18n="appName">Color Pour</h1>
         <p class="tagline" data-i18n="tagline">Pour, sort, relax</p>
       </div>
 
+      <div class="road" id="road" aria-hidden="true"></div>
+
       <button class="play-btn" id="play-btn"><b data-i18n="play">Play</b><span id="play-level" class="num">Level 1</span></button>
 
-      <div class="tiles">
-        <button class="tile" id="tile-daily"><span class="ic c1" data-icon="cal"></span><span class="tx"><b data-i18n="dailyTitle">Daily challenge</b><small id="daily-sub"></small></span><span class="badge" id="daily-badge">!</span></button>
-        <button class="tile" id="tile-wheel"><span class="ic c2" data-icon="wheel"></span><span class="tx"><b data-i18n="wheelTitle">Lucky wheel</b><small data-i18n="spinFree">Spin for free</small></span><span class="badge" id="wheel-badge">1</span></button>
-        <button class="tile" id="tile-shop"><span class="ic c5" data-icon="bag"></span><span class="tx"><b data-i18n="shopTitle">Shop</b><small data-i18n="tab_tube">Tubes</small></span></button>
-        <button class="tile" id="tile-levels"><span class="ic c3" data-icon="grid"></span><span class="tx"><b data-i18n="levelsTitle">Levels</b><small data-i18n="replay">Replay</small></span></button>
-        <button class="tile wide" id="tile-friends"><span class="ic c6" data-icon="users"></span><span class="tx"><b data-i18n="duelTile">Play with a friend</b><small data-i18n="duelTileSub">Live race with emotes</small></span><span class="badge" data-i18n="newBadge">New</span></button>
-      </div>
+      <button class="friends-btn" id="tile-friends"><span class="fr-ic" data-icon="users"></span><span class="fr-tx"><b data-i18n="duelTile">Play with a friend</b><small data-i18n="duelTileSub">Live race with emotes</small></span><span class="badge" data-i18n="newBadge">New</span></button>
     </div>
   </section>
 

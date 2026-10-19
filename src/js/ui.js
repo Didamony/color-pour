@@ -411,11 +411,31 @@
     hideTimer = setTimeout(() => { el.home.hidden = true; el.home.classList.remove('leaving'); }, 250);
   }
 
+  // A short stretch of the level path: last finished level, the current one, and the next locked ones.
+  function renderRoad() {
+    const cur = S.data.level;
+    const nums = [cur - 1, cur, cur + 1, cur + 2].filter(n => n >= 1);
+    el.road.innerHTML = '';
+    nums.forEach((n, i) => {
+      if (i) {
+        const dots = document.createElement('span');
+        dots.className = 'road-dots' + (n <= cur ? ' lit' : '');
+        el.road.appendChild(dots);
+      }
+      const node = document.createElement('span');
+      const boss = n % 10 === 0 && n >= 10;
+      node.className = 'road-node ' + (n < cur ? 'done' : n === cur ? 'cur' : 'lock') + (boss ? ' boss' : '');
+      const stars = S.data.stars[n] || 0;
+      node.innerHTML = '<b class="num">' + n + '</b>' + (n < cur ? '<i class="st">' + '★'.repeat(stars) + '</i>' : '');
+      el.road.appendChild(node);
+    });
+  }
+
   function renderHome() {
     el.logo.dataset.text = el.logo.textContent;
     el.playLevel.textContent = t('level', { n: S.data.level });
     const done = S.data.daily.doneDate === S.today();
-    el.dailySub.textContent = done ? t('dailyDone') : t('dailyReward') + ' ' + S.REWARDS.daily;
+    renderRoad();
     el.dailyBadge.hidden = done;
     const w = S.wheelState();
     el.wheelBadge.hidden = !w.free;
@@ -440,7 +460,7 @@
     ctx.clearRect(0, 0, r.width, r.height);
     const skin = S.data.equip.tube;
     const g = R.geometry(skin, 4);
-    const W = Math.min(r.height / (g.H + 2.1), r.width / 7);
+    const W = Math.min(r.height / (g.H + 2.1), r.width / 9);
     const now = performance.now();
     const k = once ? 0.82 : (now % HERO_MS) / HERO_MS;
     const theme = game ? game.theme : {};
@@ -468,16 +488,40 @@
     else { ax = pp.x + (Ahome.x - pp.x) * moveOut; ay = pp.y + (Ahome.y - pp.y) * moveOut; aa = pp.a * (1 - moveOut); }
     const bob = once ? 0 : Math.sin(now / 700) * W * 0.06;
 
+    const face = (x, topY, wink) => {
+      const blink = !once && Math.sin(now / 260) > 0.985;
+      const ey = topY, ex = W * 0.17;
+      ctx.fillStyle = '#2B1A4A';
+      for (const sx of [-1, 1]) {
+        if (blink || (wink && sx === 1)) {
+          ctx.lineWidth = W * 0.06; ctx.strokeStyle = '#2B1A4A'; ctx.lineCap = 'round';
+          ctx.beginPath(); ctx.moveTo(x + sx * ex - W * 0.07, ey); ctx.lineTo(x + sx * ex + W * 0.07, ey); ctx.stroke();
+        } else {
+          ctx.beginPath(); ctx.ellipse(x + sx * ex, ey, W * 0.075, W * 0.095, 0, 0, Math.PI * 2); ctx.fill();
+          ctx.fillStyle = '#FFFFFF';
+          ctx.beginPath(); ctx.arc(x + sx * ex + W * 0.025, ey - W * 0.035, W * 0.03, 0, Math.PI * 2); ctx.fill();
+          ctx.fillStyle = '#2B1A4A';
+        }
+      }
+      ctx.fillStyle = 'rgba(255,120,170,0.55)';
+      for (const sx of [-1, 1]) { ctx.beginPath(); ctx.ellipse(x + sx * W * 0.3, ey + W * 0.14, W * 0.08, W * 0.05, 0, 0, Math.PI * 2); ctx.fill(); }
+      ctx.strokeStyle = '#2B1A4A'; ctx.lineWidth = W * 0.05; ctx.lineCap = 'round';
+      ctx.beginPath(); ctx.arc(x, ey + W * 0.1, W * 0.1, 0.15 * Math.PI, 0.85 * Math.PI); ctx.stroke();
+    };
+
     // a finished tube on each side for balance
     R.drawTube(ctx, { id: 7, x: cx + W * 2.45, y: baseY + bob, angle: 0, W, layers: [{ c: 6, amt: 4 }], complete: true, corkT: 1 }, g, style);
+    face(cx + W * 2.45, baseY + bob + g.H * W * 0.55, false);
     const done = k > 0.64;
     const tb = R.drawTube(ctx, { id: 8, x: B.x, y: B.y, angle: 0, W, layers: [{ c: 0, amt: 2 + poured }], complete: done, corkT: Math.min(1, seg(k, 0.64, 0.74)) }, g, style);
+    face(B.x, B.y + g.H * W * 0.7, done && k < 0.86);
     if (pourT > 0 && pourT < 1) {
       ctx.fillStyle = R.liquidColor(style, 0);
       R.roundRect(ctx, pp.Lx - W * 0.08, pp.Ly, W * 0.16, tb.topY - pp.Ly + 2, W * 0.08);
       ctx.fill();
     }
     R.drawTube(ctx, { id: 9, x: ax, y: ay, angle: aa, W, layers: [{ c: 3, amt: 1 }, { c: 4, amt: 1 }, { c: 0, amt: Math.max(0, 2 - poured) }], complete: false, shadow: Math.abs(aa) < 0.2 }, g, style);
+    if (Math.abs(aa) < 0.05) face(ax, ay + g.H * W * 0.7, false);
     if (done) {
       const sk = seg(k, 0.64, 0.9);
       for (let i = 0; i < 8; i++) {
@@ -939,7 +983,7 @@
       btnUndo: $('#btn-undo'), btnTube: $('#btn-tube'), btnHint: $('#btn-hint'), btnEmote: $('#btn-emote'),
       undoCount: $('#btn-undo .count'), tubeCount: $('#btn-tube .count'), hintCount: $('#btn-hint .count'),
       home: $('#home'), hero: $('#hero'), logo: $('.logo'), playLevel: $('#play-level'),
-      dailySub: $('#daily-sub'), dailyBadge: $('#daily-badge'), wheelBadge: $('#wheel-badge'), giftDot: $('#gift-dot'),
+      road: $('#road'), dailyBadge: $('#daily-badge'), wheelBadge: $('#wheel-badge'), giftDot: $('#gift-dot'),
       bubble: $('#bubble'), toast: $('#toast'),
     };
     document.querySelectorAll('[data-icon]').forEach(n => { n.insertAdjacentHTML('afterbegin', ICON[n.dataset.icon]); });
