@@ -557,7 +557,7 @@
       const bx = cx + ch.dx * W, by = floor - hop + bob;
       const HW = g.H * Wi;
       const px = bx + Math.sin(sway) * HW, py = by - Math.cos(sway) * HW;
-      R.drawTube(ctx, { id: 20 + i, x: px, y: py, angle: sway, W: Wi, layers: ch.layers.map(c2 => ({ c: c2, amt: 1, hidden: false })), complete: false, shadow: false }, g, style);
+      R.drawTube(ctx, { id: 20 + i, x: px, y: py, angle: sway, W: Wi, layers: ch.layers.map(c2 => ({ c: c2, amt: 1, hidden: false })), complete: false, shadow: false, rigid: true }, g, style);
       const fy = HW * 0.6;
       ctx.save();
       ctx.translate(px - Math.sin(sway) * fy, py + Math.cos(sway) * fy);

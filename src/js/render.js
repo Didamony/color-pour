@@ -178,14 +178,18 @@
     pathFrom(ctx, poly);
     ctx.clip();
 
-    // liquid bands, each cut by a level line so the surface stays flat while tilting
+    // liquid bands. Normally each is cut by a level line so the surface stays flat while pouring;
+    // a "rigid" tube (the start screen characters) keeps its layers square to the glass instead.
+    const rigid = !!tv.rigid && !upright;
     const unitA = UNIT * W * W;
-    let cum = 0, lowY = b.y1 + 2;
+    const polyU = rigid ? transform(g.poly, W, 0, 0, 0) : null;
+    const bU = rigid ? bounds(polyU) : null;
+    let cum = 0, lowY = (rigid ? bU.y1 : b.y1) + 2;
     const bands = [];
     for (const L of tv.layers) {
       if (L.amt <= 0.001) continue;
       cum += L.amt * unitA;
-      const h = levelFor(poly, b, cum);
+      const h = rigid ? levelFor(polyU, bU, cum) : levelFor(poly, b, cum);
       bands.push({ L, top: h, bot: lowY });
       lowY = h;
     }
@@ -194,22 +198,26 @@
       if (!L.hidden && L.reveal != null && L.reveal < 1) col = mix(th.mystery, col, L.reveal);
       return col;
     };
-    for (const band of bands) {
+    // Paint from the top band down, each reaching to the bottom of the tube, so neighbouring
+    // colours always overlap and no seam can show between them.
+    if (rigid) local();
+    const fx = rigid ? -W : b.x0 - 4, fw = rigid ? W * 2 : b.x1 - b.x0 + 8, floorY = (rigid ? bU.y1 : b.y1) + 4;
+    for (let i = bands.length - 1; i >= 0; i--) {
+      const band = bands[i];
       ctx.fillStyle = colorOf(band.L);
-      ctx.fillRect(b.x0 - 4, band.top - 0.5, b.x1 - b.x0 + 8, band.bot - band.top + 1);
-      if (style.liquid === 'glossy' || style.liquid === 'neon') {
-        ctx.fillStyle = style.liquid === 'neon' ? 'rgba(255,255,255,0.55)' : 'rgba(255,255,255,0.3)';
-        ctx.fillRect(b.x0 - 4, band.top, b.x1 - b.x0 + 8, Math.max(1.5, W * 0.05));
-      }
+      ctx.fillRect(fx, band.top - 0.5, fw, floorY - band.top + 0.5);
     }
+    if (style.liquid === 'glossy' || style.liquid === 'neon') {
+      ctx.fillStyle = style.liquid === 'neon' ? 'rgba(255,255,255,0.55)' : 'rgba(255,255,255,0.3)';
+      for (const band of bands) ctx.fillRect(fx, band.top, fw, Math.max(1.5, W * 0.05));
+    }
+    if (rigid) ctx.restore();
     if (bands.length) {
       const top = bands[bands.length - 1].top;
       // round, lit shading across the liquid
       ctx.save();
-      ctx.beginPath();
-      ctx.rect(b.x0 - 6, top, b.x1 - b.x0 + 12, b.y1 - top + 6);
-      ctx.clip();
-      local();
+      if (rigid) { local(); ctx.beginPath(); ctx.rect(-W, top, W * 2, bU.y1 - top + 6); ctx.clip(); }
+      else { ctx.beginPath(); ctx.rect(b.x0 - 6, top, b.x1 - b.x0 + 12, b.y1 - top + 6); ctx.clip(); local(); }
       const sh = ctx.createLinearGradient(-W / 2, 0, W / 2, 0);
       sh.addColorStop(0, 'rgba(0,0,0,0.24)');
       sh.addColorStop(0.22, 'rgba(255,255,255,0.10)');
@@ -220,17 +228,17 @@
       ctx.fillRect(-W, -W, W * 2, g.H * W + W * 2);
       ctx.restore();
       ctx.restore();
-      // the surface: a lit ellipse when standing, a bright line when tilted
+      // the surface: a lit ellipse when standing (or rigid), a bright line when the liquid levels out
       const topCol = colorOf(bands[bands.length - 1].L);
-      if (upright) {
+      if (upright || rigid) {
         ctx.fillStyle = mix(topCol.length === 7 ? topCol : '#888888', '#FFFFFF', 0.38);
-        ctx.beginPath();
-        ctx.ellipse(tv.x, top, W * 0.47, W * 0.085, 0, 0, Math.PI * 2);
-        ctx.fill();
+        if (rigid) { local(); ctx.beginPath(); ctx.ellipse(0, top, W * 0.47, W * 0.085, 0, 0, Math.PI * 2); ctx.fill(); ctx.restore(); }
+        else { ctx.beginPath(); ctx.ellipse(tv.x, top, W * 0.47, W * 0.085, 0, 0, Math.PI * 2); ctx.fill(); }
       } else {
         ctx.fillStyle = 'rgba(255,255,255,0.38)';
         ctx.fillRect(b.x0 - 4, top, b.x1 - b.x0 + 8, Math.max(1.5, W * 0.045));
       }
+      if (rigid) { bands.forEach(bd => { bd.top = tv.y + Math.cos(a) * bd.top; bd.bot = tv.y + Math.cos(a) * bd.bot; }); }
       if (style.liquid === 'bubbles' || style.liquid === 'glitter') drawSparkles(ctx, tv, b, top, W, style);
     }
 

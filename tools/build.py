@@ -13,7 +13,7 @@ SRC = ROOT / "src"
 DIST = ROOT / "dist"
 SITE_URL = "https://didamony.github.io/color-pour/"
 TITLE = "صبّ الألوان · Color Pour"
-DESCRIPTION = "لعبة ترتيب ألوان كيوت: صُبّ الألوان ورتّب كل لون في إزازة. أدوار مالهاش آخر، متجر، هدية كل يوم، واللعب مع صحابك."
+DESCRIPTION = "لعبة ترتيب ألوان ممتعة: اسكب الألوان ورتّب كل لون في أنبوب. مستويات لا تنتهي، ومتجر، وهدية يومية، واللعب مع الأصدقاء."
 
 HEAD = f"""<title>{TITLE}</title>
 <meta name="description" content="{DESCRIPTION}">

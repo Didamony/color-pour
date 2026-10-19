@@ -68,7 +68,7 @@ window.draw = (kind, w, h) => {
     ctx.shadowBlur = 0; ctx.shadowOffsetY = 0;
     ctx.font = '800 ' + Math.round(h * 0.055) + 'px "Baloo Bhaijaan 2", sans-serif';
     ctx.fillStyle = 'rgba(255,255,255,0.9)';
-    ctx.fillText('صُبّ، رتّب، وروّق', w * 0.7, h * 0.78);
+    ctx.fillText('اسكب، رتّب، واستمتع', w * 0.7, h * 0.78);
   }
   return c.toDataURL('image/png');
 };
