@@ -1,0 +1,4 @@
+dist/
+tools/shots/
+node_modules/
+__pycache__/

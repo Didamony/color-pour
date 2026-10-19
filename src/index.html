@@ -1,0 +1,69 @@
+<title>Color Pour</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Baloo+Bhaijaan+2:wght@500;600;700;800&display=swap">
+<style>/*@CSS@*/</style>
+
+<div id="app" class="bg-cloud">
+  <canvas id="board" aria-label="Game board"></canvas>
+
+  <header class="topbar">
+    <button class="icon-btn" id="btn-home" data-icon="home" data-i18n-label="home"></button>
+    <div class="level-head">
+      <div class="level-title" id="level-title">Level 1</div>
+      <div class="level-sub"><span id="moves" class="num"></span><span id="level-tag" class="tag" hidden></span></div>
+    </div>
+    <button class="coins" id="coins-pill"><i class="coin" aria-hidden="true"></i><span class="num" data-coins>0</span></button>
+    <button class="icon-btn" id="btn-settings" data-icon="gear" data-i18n-label="settings"></button>
+    <div class="duel-bar" id="duel-bar" hidden>
+      <div class="pchip me"><b dir="auto"></b><span class="pbar"><span class="fill"></span></span></div>
+      <span class="vs">VS</span>
+      <div class="pchip opp"><b dir="auto"></b><span class="pbar"><span class="fill"></span></span></div>
+    </div>
+  </header>
+
+  <nav class="toolbar">
+    <button class="tool" id="btn-undo" data-icon="undo"><span data-i18n="undo">Undo</span><span class="count"></span></button>
+    <button class="tool" id="btn-restart" data-icon="restart"><span data-i18n="restart">Restart</span></button>
+    <button class="tool" id="btn-tube" data-icon="tube"><span data-i18n="addTube">Tube</span><span class="count"></span></button>
+    <button class="tool" id="btn-hint" data-icon="bulb"><span data-i18n="hint">Hint</span><span class="count"></span></button>
+    <button class="tool" id="btn-emote" data-icon="chat" hidden><span data-i18n="emotes">Emotes</span></button>
+  </nav>
+
+  <div class="bubble" id="bubble" hidden></div>
+
+  <section class="screen" id="home">
+    <div class="home-inner">
+      <div class="home-top">
+        <button class="coins" id="home-coins"><i class="coin" aria-hidden="true"></i><span class="num" data-coins>0</span></button>
+        <div class="right">
+          <button class="icon-btn gift-btn" id="gift-btn" data-icon="gift" data-i18n-label="giftTitle"><span class="dot" id="gift-dot" hidden></span></button>
+          <button class="icon-btn" id="home-settings" data-icon="gear" data-i18n-label="settings"></button>
+        </div>
+      </div>
+
+      <div class="hero">
+        <canvas id="hero" aria-hidden="true"></canvas>
+        <h1 class="logo" data-i18n="appName">Color Pour</h1>
+        <p class="tagline" data-i18n="tagline">Pour, sort, relax</p>
+      </div>
+
+      <button class="play-btn" id="play-btn"><b data-i18n="play">Play</b><span id="play-level" class="num">Level 1</span></button>
+
+      <div class="tiles">
+        <button class="tile" id="tile-daily"><span class="ic c1" data-icon="cal"></span><span class="tx"><b data-i18n="dailyTitle">Daily challenge</b><small id="daily-sub"></small></span><span class="badge" id="daily-badge">!</span></button>
+        <button class="tile" id="tile-wheel"><span class="ic c2" data-icon="wheel"></span><span class="tx"><b data-i18n="wheelTitle">Lucky wheel</b><small data-i18n="spinFree">Spin for free</small></span><span class="badge" id="wheel-badge">1</span></button>
+        <button class="tile" id="tile-shop"><span class="ic c5" data-icon="bag"></span><span class="tx"><b data-i18n="shopTitle">Shop</b><small data-i18n="tab_tube">Tubes</small></span></button>
+        <button class="tile" id="tile-levels"><span class="ic c3" data-icon="grid"></span><span class="tx"><b data-i18n="levelsTitle">Levels</b><small data-i18n="replay">Replay</small></span></button>
+        <button class="tile wide" id="tile-friends"><span class="ic c6" data-icon="users"></span><span class="tx"><b data-i18n="duelTile">Play with a friend</b><small data-i18n="duelTileSub">Live race with emotes</small></span><span class="badge" data-i18n="newBadge">New</span></button>
+      </div>
+    </div>
+  </section>
+
+  <div class="emote-layer" id="emote-layer" aria-live="polite"></div>
+  <div class="emote-panel" id="emote-panel" hidden></div>
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+</div>
+
+<script>/*@JS@*/</script>
