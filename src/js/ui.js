@@ -150,12 +150,23 @@
     const m = S.data.theme;
     if (m === 'light' || m === 'dark') document.documentElement.setAttribute('data-mode', m);
     else document.documentElement.removeAttribute('data-mode');
-    requestAnimationFrame(() => { if (game) game.readTheme(); drawHero(true); });
+    requestAnimationFrame(retheme);
+  }
+
+  function isNight() {
+    return getComputedStyle(document.documentElement).getPropertyValue('--scene-night').trim() === '1';
+  }
+
+  function retheme() {
+    if (game) game.readTheme();
+    CP.Scene.set(S.data.equip.bg, isNight());
+    drawHero(true);
   }
 
   function applyStyle() {
     const eq = S.data.equip;
     el.app.className = 'bg-' + eq.bg;
+    CP.Scene.set(eq.bg, isNight());
     if (!game) return;
     game.style = { skin: eq.tube, liquid: eq.liquid, symbols: S.data.symbols, fx: eq.fx };
     game.layout();
@@ -387,6 +398,7 @@
     hideBubble();
     el.home.hidden = false;
     el.home.classList.remove('leaving');
+    el.app.dataset.home = '1';
     renderHome();
     heroRunning = true;
     requestAnimationFrame(heroLoop);
@@ -394,11 +406,13 @@
   function hideHome() {
     if (el.home.hidden) return;
     el.home.classList.add('leaving');
+    delete el.app.dataset.home;
     heroRunning = false;
     hideTimer = setTimeout(() => { el.home.hidden = true; el.home.classList.remove('leaving'); }, 250);
   }
 
   function renderHome() {
+    el.logo.dataset.text = el.logo.textContent;
     el.playLevel.textContent = t('level', { n: S.data.level });
     const done = S.data.daily.doneDate === S.today();
     el.dailySub.textContent = done ? t('dailyDone') : t('dailyReward') + ' ' + S.REWARDS.daily;
@@ -411,6 +425,8 @@
 
   // little animated tubes on the home screen
   let heroRunning = false, heroCtx = null;
+  // Home hero: one tube pours into another on a loop, the filled tube gets its cork, then it starts over.
+  const HERO_MS = 4600;
   function drawHero(once) {
     const c = el.hero;
     if (!c || el.home.hidden) return;
@@ -422,19 +438,58 @@
     const ctx = heroCtx;
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     ctx.clearRect(0, 0, r.width, r.height);
-    const g = R.geometry(S.data.equip.tube, 4);
-    const W = Math.min(r.height / (g.H + 1.1), r.width / 8);
-    const sets = [[0, 1, 2], [6, 7, 7, 8], [2, 2, 2, 2], [4, 5]];
+    const skin = S.data.equip.tube;
+    const g = R.geometry(skin, 4);
+    const W = Math.min(r.height / (g.H + 2.1), r.width / 7);
     const now = performance.now();
+    const k = once ? 0.82 : (now % HERO_MS) / HERO_MS;
     const theme = game ? game.theme : {};
-    const style = { skin: S.data.equip.tube, liquid: S.data.equip.liquid, symbols: false, theme, time: now };
-    sets.forEach((layers, i) => {
-      const x = r.width / 2 + (i - 1.5) * W * 1.9;
-      const bob = once ? 0 : Math.sin(now / 600 + i * 1.3) * W * 0.12;
-      const y = W * 0.9 + bob;
-      const angle = i === 0 ? Math.sin(now / 900) * 0.12 : 0;
-      R.drawTube(ctx, { id: i, x, y, angle, W, layers: layers.map(c2 => ({ c: c2, amt: 1, hidden: false })), complete: i === 2, corkT: 1 }, g, style);
-    });
+    const style = { skin, liquid: S.data.equip.liquid, symbols: false, theme, time: now };
+    const baseY = r.height - g.H * W - W * 0.45;
+    const cx = r.width / 2;
+    const ease = x => (x < 0.5 ? 2 * x * x : 1 - Math.pow(-2 * x + 2, 2) / 2);
+    const seg = (x, a0, a1) => Math.min(1, Math.max(0, (x - a0) / (a1 - a0)));
+    const fade = k < 0.06 ? k / 0.06 : k > 0.93 ? (1 - k) / 0.07 : 1;
+    ctx.globalAlpha = fade;
+
+    const B = { x: cx + W * 0.35, y: baseY };
+    const Ahome = { x: cx - W * 1.9, y: baseY };
+    const poured = 2 * ease(seg(k, 0.3, 0.62));
+    const pourT = seg(k, 0.3, 0.62);
+    const moveIn = ease(seg(k, 0.14, 0.3)), moveOut = ease(seg(k, 0.62, 0.76));
+    const pose = th => {
+      const Lx = B.x - W * 0.16, Ly = B.y - W * 0.55;
+      return { x: Lx - (W / 2) * Math.cos(th), y: Ly - (W / 2) * Math.sin(th), a: th, Lx, Ly };
+    };
+    const th0 = Math.max(1.0, R.tiltFor(g, 4) + 0.04), th1 = Math.max(1.15, R.tiltFor(g, 2) + 0.1);
+    const pp = pose(th0 + (th1 - th0) * ease(pourT));
+    let ax, ay, aa;
+    if (k < 0.62) { ax = Ahome.x + (pp.x - Ahome.x) * moveIn; ay = Ahome.y + (pp.y - Ahome.y) * moveIn; aa = pp.a * moveIn; }
+    else { ax = pp.x + (Ahome.x - pp.x) * moveOut; ay = pp.y + (Ahome.y - pp.y) * moveOut; aa = pp.a * (1 - moveOut); }
+    const bob = once ? 0 : Math.sin(now / 700) * W * 0.06;
+
+    // a finished tube on each side for balance
+    R.drawTube(ctx, { id: 7, x: cx + W * 2.45, y: baseY + bob, angle: 0, W, layers: [{ c: 6, amt: 4 }], complete: true, corkT: 1 }, g, style);
+    const done = k > 0.64;
+    const tb = R.drawTube(ctx, { id: 8, x: B.x, y: B.y, angle: 0, W, layers: [{ c: 0, amt: 2 + poured }], complete: done, corkT: Math.min(1, seg(k, 0.64, 0.74)) }, g, style);
+    if (pourT > 0 && pourT < 1) {
+      ctx.fillStyle = R.liquidColor(style, 0);
+      R.roundRect(ctx, pp.Lx - W * 0.08, pp.Ly, W * 0.16, tb.topY - pp.Ly + 2, W * 0.08);
+      ctx.fill();
+    }
+    R.drawTube(ctx, { id: 9, x: ax, y: ay, angle: aa, W, layers: [{ c: 3, amt: 1 }, { c: 4, amt: 1 }, { c: 0, amt: Math.max(0, 2 - poured) }], complete: false, shadow: Math.abs(aa) < 0.2 }, g, style);
+    if (done) {
+      const sk = seg(k, 0.64, 0.9);
+      for (let i = 0; i < 8; i++) {
+        const ang = (i / 8) * Math.PI * 2, d = W * (0.6 + sk * 1.4);
+        ctx.globalAlpha = fade * (1 - sk);
+        ctx.fillStyle = i % 2 ? '#FFD23F' : '#FFFFFF';
+        const sx = B.x + Math.cos(ang) * d, sy = B.y + W * 0.6 + Math.sin(ang) * d * 0.8, sz = W * 0.14;
+        ctx.beginPath(); ctx.moveTo(sx, sy - sz); ctx.lineTo(sx + sz * 0.3, sy); ctx.lineTo(sx, sy + sz); ctx.lineTo(sx - sz * 0.3, sy); ctx.closePath(); ctx.fill();
+      }
+      ctx.globalAlpha = 1;
+    }
+    ctx.globalAlpha = 1;
   }
   function heroLoop() {
     if (!heroRunning) return;
@@ -729,8 +784,9 @@
               pv.style.background = 'var(--surface)';
               previewTube(c, tab === 'tube' ? it.id : S.data.equip.tube, tab === 'liquid' ? it.id : S.data.equip.liquid);
             } else if (tab === 'bg') {
-              pv.classList.add('swatch');
-              pv.style.background = 'radial-gradient(120% 90% at 50% 0%, var(--' + it.id + '-a), var(--' + it.id + '-b))';
+              const c = document.createElement('canvas');
+              pv.appendChild(c);
+              requestAnimationFrame(() => CP.Scene.thumb(c, it.id, isNight()));
             } else {
               pv.style.background = FX_BG[it.id];
               pv.style.color = '#fff';
@@ -882,12 +938,13 @@
       levelTitle: $('#level-title'), levelTag: $('#level-tag'), moves: $('#moves'),
       btnUndo: $('#btn-undo'), btnTube: $('#btn-tube'), btnHint: $('#btn-hint'), btnEmote: $('#btn-emote'),
       undoCount: $('#btn-undo .count'), tubeCount: $('#btn-tube .count'), hintCount: $('#btn-hint .count'),
-      home: $('#home'), hero: $('#hero'), playLevel: $('#play-level'),
+      home: $('#home'), hero: $('#hero'), logo: $('.logo'), playLevel: $('#play-level'),
       dailySub: $('#daily-sub'), dailyBadge: $('#daily-badge'), wheelBadge: $('#wheel-badge'), giftDot: $('#gift-dot'),
       bubble: $('#bubble'), toast: $('#toast'),
     };
     document.querySelectorAll('[data-icon]').forEach(n => { n.insertAdjacentHTML('afterbegin', ICON[n.dataset.icon]); });
 
+    CP.Scene.init($('#scene'));
     game = new CP.Game(el.canvas, {
       onChange() { updateHUD(); persistPlay(); if (mode === 'duel') CP.Duel.onChange(game); },
       onSettle() { if (game.tutorial) tutorialStep(); },
@@ -925,9 +982,9 @@
     measure();
 
     const mq = window.matchMedia('(prefers-color-scheme: dark)');
-    const retheme = () => requestAnimationFrame(() => { game.readTheme(); drawHero(true); });
-    if (mq.addEventListener) mq.addEventListener('change', retheme);
-    new MutationObserver(retheme).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme', 'data-mode'] });
+    const rethemeSoon = () => requestAnimationFrame(retheme);
+    if (mq.addEventListener) mq.addEventListener('change', rethemeSoon);
+    new MutationObserver(rethemeSoon).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme', 'data-mode'] });
 
     const unlockOnce = () => { A.unlock(); A.setMusic(S.data.music); window.removeEventListener('pointerdown', unlockOnce, true); };
     window.addEventListener('pointerdown', unlockOnce, true);

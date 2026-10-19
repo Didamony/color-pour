@@ -158,15 +158,27 @@
     const th = style.theme;
     const golden = style.skin === 'golden';
 
+    const upright = Math.abs(a) < 0.02;
+    const local = () => { ctx.save(); ctx.translate(tv.x, tv.y); ctx.rotate(a); };
+
+    // soft shadow on the shelf
+    if (Math.abs(a) < 0.25 && tv.shadow !== false) {
+      ctx.fillStyle = th.shadow || 'rgba(40,20,80,0.18)';
+      ctx.beginPath();
+      ctx.ellipse(tv.x, b.y1 + W * 0.06, W * 0.62, W * 0.13, 0, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
     // glass body
     pathFrom(ctx, poly);
     ctx.fillStyle = th.glass;
     ctx.fill();
 
-    // liquid
     ctx.save();
     pathFrom(ctx, poly);
     ctx.clip();
+
+    // liquid bands, each cut by a level line so the surface stays flat while tilting
     const unitA = UNIT * W * W;
     let cum = 0, lowY = b.y1 + 2;
     const bands = [];
@@ -177,32 +189,71 @@
       bands.push({ L, top: h, bot: lowY });
       lowY = h;
     }
-    const upright = Math.abs(a) < 0.02;
-    for (const band of bands) {
-      const L = band.L;
+    const colorOf = L => {
       let col = L.hidden ? th.mystery : liquidColor(style, L.c);
       if (!L.hidden && L.reveal != null && L.reveal < 1) col = mix(th.mystery, col, L.reveal);
-      ctx.fillStyle = col;
+      return col;
+    };
+    for (const band of bands) {
+      ctx.fillStyle = colorOf(band.L);
       ctx.fillRect(b.x0 - 4, band.top - 0.5, b.x1 - b.x0 + 8, band.bot - band.top + 1);
       if (style.liquid === 'glossy' || style.liquid === 'neon') {
-        ctx.fillStyle = style.liquid === 'neon' ? 'rgba(255,255,255,0.55)' : 'rgba(255,255,255,0.28)';
+        ctx.fillStyle = style.liquid === 'neon' ? 'rgba(255,255,255,0.55)' : 'rgba(255,255,255,0.3)';
         ctx.fillRect(b.x0 - 4, band.top, b.x1 - b.x0 + 8, Math.max(1.5, W * 0.05));
       }
     }
     if (bands.length) {
       const top = bands[bands.length - 1].top;
-      ctx.fillStyle = 'rgba(255,255,255,0.32)';
-      ctx.fillRect(b.x0 - 4, top, b.x1 - b.x0 + 8, Math.max(1.5, W * 0.045));
+      // round, lit shading across the liquid
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(b.x0 - 6, top, b.x1 - b.x0 + 12, b.y1 - top + 6);
+      ctx.clip();
+      local();
+      const sh = ctx.createLinearGradient(-W / 2, 0, W / 2, 0);
+      sh.addColorStop(0, 'rgba(0,0,0,0.24)');
+      sh.addColorStop(0.22, 'rgba(255,255,255,0.10)');
+      sh.addColorStop(0.42, 'rgba(255,255,255,0.20)');
+      sh.addColorStop(0.7, 'rgba(0,0,0,0.02)');
+      sh.addColorStop(1, 'rgba(0,0,0,0.26)');
+      ctx.fillStyle = sh;
+      ctx.fillRect(-W, -W, W * 2, g.H * W + W * 2);
+      ctx.restore();
+      ctx.restore();
+      // the surface: a lit ellipse when standing, a bright line when tilted
+      const topCol = colorOf(bands[bands.length - 1].L);
+      if (upright) {
+        ctx.fillStyle = mix(topCol.length === 7 ? topCol : '#888888', '#FFFFFF', 0.38);
+        ctx.beginPath();
+        ctx.ellipse(tv.x, top, W * 0.47, W * 0.085, 0, 0, Math.PI * 2);
+        ctx.fill();
+      } else {
+        ctx.fillStyle = 'rgba(255,255,255,0.38)';
+        ctx.fillRect(b.x0 - 4, top, b.x1 - b.x0 + 8, Math.max(1.5, W * 0.045));
+      }
       if (style.liquid === 'bubbles' || style.liquid === 'glitter') drawSparkles(ctx, tv, b, top, W, style);
     }
-    // glare stripe inside the glass
-    ctx.save();
-    ctx.translate(tv.x, tv.y);
-    ctx.rotate(a);
-    ctx.fillStyle = 'rgba(255,255,255,0.22)';
-    roundRect(ctx, -W * 0.33, W * 0.28, W * 0.1, g.H * W * 0.62, W * 0.05);
+
+    // curved glass: brighter edges, clear middle, plus two glints
+    local();
+    const gl = ctx.createLinearGradient(-W / 2, 0, W / 2, 0);
+    gl.addColorStop(0, 'rgba(255,255,255,0.42)');
+    gl.addColorStop(0.16, 'rgba(255,255,255,0.06)');
+    gl.addColorStop(0.82, 'rgba(255,255,255,0)');
+    gl.addColorStop(1, 'rgba(255,255,255,0.3)');
+    ctx.fillStyle = gl;
+    ctx.fillRect(-W, -W, W * 2, g.H * W + W * 2);
+    const glare = ctx.createLinearGradient(0, W * 0.25, 0, g.H * W * 0.85);
+    glare.addColorStop(0, 'rgba(255,255,255,0.7)');
+    glare.addColorStop(1, 'rgba(255,255,255,0.08)');
+    ctx.fillStyle = glare;
+    roundRect(ctx, -W * 0.34, W * 0.25, W * 0.11, g.H * W * 0.6, W * 0.055);
+    ctx.fill();
+    ctx.fillStyle = 'rgba(255,255,255,0.4)';
+    roundRect(ctx, W * 0.2, W * 0.32, W * 0.07, W * 0.55, W * 0.035);
     ctx.fill();
     ctx.restore();
+
     // symbols / question marks, only when standing still
     if (upright && (style.symbols || bands.some(x => x.L.hidden))) {
       ctx.textAlign = 'center';
@@ -224,40 +275,52 @@
     }
     ctx.restore();
 
-    // outline
+    // outline: a coloured edge with a thin bright inner line
     pathFrom(ctx, poly);
     ctx.lineJoin = 'round';
-    ctx.lineWidth = Math.max(2, W * 0.055);
+    ctx.lineWidth = Math.max(2, W * 0.065);
     ctx.strokeStyle = golden ? '#E2A92B' : th.stroke;
+    ctx.stroke();
+    ctx.lineWidth = Math.max(1, W * 0.022);
+    ctx.strokeStyle = 'rgba(255,255,255,0.6)';
     ctx.stroke();
     if (tv.selected) {
       ctx.save();
+      pathFrom(ctx, poly);
       ctx.shadowColor = th.accent;
-      ctx.shadowBlur = W * 0.35;
-      ctx.lineWidth = Math.max(2.5, W * 0.07);
+      ctx.shadowBlur = W * 0.45;
+      ctx.lineWidth = Math.max(2.5, W * 0.075);
       ctx.strokeStyle = th.accent;
       ctx.stroke();
       ctx.restore();
     }
 
     // rim and cork in tube space
-    ctx.save();
-    ctx.translate(tv.x, tv.y);
-    ctx.rotate(a);
-    ctx.fillStyle = golden ? '#F1C24B' : th.rim;
-    roundRect(ctx, -W * 0.6, -W * 0.07, W * 1.2, W * 0.16, W * 0.08);
+    local();
+    const rim = ctx.createLinearGradient(0, -W * 0.1, 0, W * 0.12);
+    rim.addColorStop(0, '#FFFFFF');
+    rim.addColorStop(0.45, golden ? '#F7D368' : th.rim);
+    rim.addColorStop(1, golden ? '#C98F1C' : th.stroke);
+    ctx.fillStyle = rim;
+    roundRect(ctx, -W * 0.62, -W * 0.09, W * 1.24, W * 0.19, W * 0.09);
     ctx.fill();
     if (tv.complete) {
       const t = tv.corkT == null ? 1 : tv.corkT;
       const drop = (1 - easeOutBack(t)) * -W * 0.9;
       ctx.globalAlpha = Math.min(1, t * 3);
-      ctx.fillStyle = th.cork;
-      roundRect(ctx, -W * 0.34, -W * 0.36 + drop, W * 0.68, W * 0.36, W * 0.1);
+      const ck = ctx.createLinearGradient(-W * 0.34, 0, W * 0.34, 0);
+      ck.addColorStop(0, mix(th.cork, '#000000', 0.15));
+      ck.addColorStop(0.4, mix(th.cork, '#FFFFFF', 0.2));
+      ck.addColorStop(1, mix(th.cork, '#000000', 0.25));
+      ctx.fillStyle = ck;
+      roundRect(ctx, -W * 0.34, -W * 0.4 + drop, W * 0.68, W * 0.42, W * 0.12);
       ctx.fill();
-      ctx.fillStyle = 'rgba(0,0,0,0.12)';
-      ctx.fillRect(-W * 0.34, -W * 0.16 + drop, W * 0.68, W * 0.05);
-      ctx.fillStyle = 'rgba(255,255,255,0.35)';
-      roundRect(ctx, -W * 0.26, -W * 0.31 + drop, W * 0.2, W * 0.07, W * 0.035);
+      ctx.fillStyle = 'rgba(0,0,0,0.14)';
+      [[-0.15, -0.26], [0.1, -0.18], [-0.02, -0.08], [0.18, -0.3]].forEach(([dx, dy]) => {
+        ctx.beginPath(); ctx.arc(dx * W, dy * W + drop, W * 0.03, 0, Math.PI * 2); ctx.fill();
+      });
+      ctx.fillStyle = 'rgba(255,255,255,0.45)';
+      roundRect(ctx, -W * 0.26, -W * 0.36 + drop, W * 0.22, W * 0.07, W * 0.035);
       ctx.fill();
     }
     ctx.restore();

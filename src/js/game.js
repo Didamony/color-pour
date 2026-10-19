@@ -39,6 +39,10 @@
     const v = n => cs.getPropertyValue(n).trim();
     this.theme = {
       glass: v('--glass') || 'rgba(255,255,255,0.5)',
+      shadow: v('--tube-shadow') || 'rgba(40,20,80,0.18)',
+      shelfTop: v('--shelf-top') || '#FFFFFF',
+      shelfFront: v('--shelf-front') || '#F3C6E2',
+      shelfEdge: v('--shelf-edge') || '#D98BBE',
       stroke: v('--glass-stroke') || '#9C8BC9',
       rim: v('--glass-rim') || '#C9BEE8',
       mystery: v('--mystery') || '#6B5E8C',
@@ -178,12 +182,12 @@
     for (let r = 1; r <= 4; r++) {
       const per = Math.ceil(n / r);
       const wx = availW / per / 1.6;
-      const wy = availH / (r * (g.H + 1.25));
+      const wy = availH / (r * (g.H + 1.5));
       const W = Math.min(wx, wy, 60);
       if (!best || W > best.W + 1.5) best = { r, per, W };
     }
     const { r, W } = best;
-    const rowH = W * (g.H + 1.25);
+    const rowH = W * (g.H + 1.5);
     const counts = [];
     for (let i = 0; i < r; i++) counts.push(Math.floor(n / r) + (i < n % r ? 1 : 0));
     const total = rowH * r;
@@ -191,9 +195,12 @@
     const cx = this.cssW / 2;
     let idx = 0;
     this.cellW = 0;
+    this.rows = [];
     for (let row = 0; row < r; row++) {
       const cnt = counts[row];
       const cell = Math.min(W * 2.1, availW / cnt);
+      const span = (cnt - 1) * cell + W * 1.9;
+      this.rows.push({ y: y0 + row * rowH + g.H * W, x0: cx - span / 2, x1: cx + span / 2 });
       this.cellW = Math.max(this.cellW, cell);
       for (let k = 0; k < cnt; k++, idx++) {
         const v = this.vis[idx];
@@ -555,6 +562,7 @@
     const tops = {};
     const hintPulse = this.hintMove ? 0.5 + 0.5 * Math.sin((t - this.hintMove.t0) / 160) : 0;
 
+    this.drawShelves(ctx);
     for (let pass = 0; pass < 2; pass++) {
       if (pass === 1) this.drawStreams(ctx, tops);
       for (let i = 0; i < this.vis.length; i++) {
@@ -583,6 +591,30 @@
       }
     }
     this.drawParticles(ctx, dt);
+  };
+
+  // A rounded shelf under each row of tubes.
+  Game.prototype.drawShelves = function (ctx) {
+    if (!this.rows) return;
+    const W = this.W, th = this.theme;
+    for (const r of this.rows) {
+      const x = r.x0, w = r.x1 - r.x0, y = r.y + W * 0.08, hTop = W * 0.16, hFront = W * 0.2;
+      ctx.fillStyle = 'rgba(30,10,60,0.14)';
+      R.roundRect(ctx, x + W * 0.1, y + hTop + hFront - W * 0.02, w - W * 0.2, W * 0.14, W * 0.07);
+      ctx.fill();
+      const front = ctx.createLinearGradient(0, y + hTop, 0, y + hTop + hFront);
+      front.addColorStop(0, th.shelfFront);
+      front.addColorStop(1, th.shelfEdge);
+      ctx.fillStyle = front;
+      R.roundRect(ctx, x, y + hTop * 0.5, w, hTop * 0.5 + hFront, W * 0.12);
+      ctx.fill();
+      ctx.fillStyle = th.shelfTop;
+      R.roundRect(ctx, x, y, w, hTop, W * 0.08);
+      ctx.fill();
+      ctx.fillStyle = 'rgba(255,255,255,0.55)';
+      R.roundRect(ctx, x + W * 0.25, y + hTop * 0.25, w - W * 0.5, hTop * 0.22, hTop * 0.11);
+      ctx.fill();
+    }
   };
 
   Game.prototype.drawStreams = function (ctx, tops) {
