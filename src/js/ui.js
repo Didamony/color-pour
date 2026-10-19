@@ -157,16 +157,20 @@
     return getComputedStyle(document.documentElement).getPropertyValue('--scene-night').trim() === '1';
   }
 
+  function sceneNow() {
+    CP.Scene.set(el.home && !el.home.hidden && !el.home.classList.contains('leaving') ? 'home' : S.data.equip.bg, isNight());
+  }
+
   function retheme() {
     if (game) game.readTheme();
-    CP.Scene.set(S.data.equip.bg, isNight());
+    sceneNow();
     drawHero(true);
   }
 
   function applyStyle() {
     const eq = S.data.equip;
     el.app.className = 'bg-' + eq.bg;
-    CP.Scene.set(eq.bg, isNight());
+    sceneNow();
     if (!game) return;
     game.style = { skin: eq.tube, liquid: eq.liquid, symbols: S.data.symbols, fx: eq.fx };
     game.layout();
@@ -399,6 +403,7 @@
     el.home.hidden = false;
     el.home.classList.remove('leaving');
     el.app.dataset.home = '1';
+    sceneNow();
     renderHome();
     heroRunning = true;
     requestAnimationFrame(heroLoop);
@@ -407,6 +412,7 @@
     if (el.home.hidden) return;
     el.home.classList.add('leaving');
     delete el.app.dataset.home;
+    sceneNow();
     heroRunning = false;
     hideTimer = setTimeout(() => { el.home.hidden = true; el.home.classList.remove('leaving'); }, 250);
   }
@@ -465,7 +471,7 @@
     const k = once ? 0.82 : (now % HERO_MS) / HERO_MS;
     const theme = game ? game.theme : {};
     const style = { skin, liquid: S.data.equip.liquid, symbols: false, theme, time: now };
-    const baseY = r.height - g.H * W - W * 0.45;
+    const baseY = r.height - g.H * W - W * 1.25;
     const cx = r.width / 2;
     const ease = x => (x < 0.5 ? 2 * x * x : 1 - Math.pow(-2 * x + 2, 2) / 2);
     const seg = (x, a0, a1) => Math.min(1, Math.max(0, (x - a0) / (a1 - a0)));
@@ -487,6 +493,24 @@
     if (k < 0.62) { ax = Ahome.x + (pp.x - Ahome.x) * moveIn; ay = Ahome.y + (pp.y - Ahome.y) * moveIn; aa = pp.a * moveIn; }
     else { ax = pp.x + (Ahome.x - pp.x) * moveOut; ay = pp.y + (Ahome.y - pp.y) * moveOut; aa = pp.a * (1 - moveOut); }
     const bob = once ? 0 : Math.sin(now / 700) * W * 0.06;
+
+    // spotlight and a round stage under the tubes
+    const floorY = baseY + g.H * W + W * 0.05;
+    const spot = ctx.createRadialGradient(cx + W * 0.2, floorY - g.H * W * 0.5, 0, cx + W * 0.2, floorY - g.H * W * 0.5, g.H * W * 1.1);
+    spot.addColorStop(0, 'rgba(255,255,255,0.45)'); spot.addColorStop(1, 'rgba(255,255,255,0)');
+    ctx.fillStyle = spot; ctx.fillRect(0, 0, r.width, r.height);
+    const pw = W * 3.6, ph = W * 0.55, pd = W * 0.42, pcx = cx + W * 0.25;
+    const side = ctx.createLinearGradient(0, floorY, 0, floorY + pd + ph / 2);
+    side.addColorStop(0, '#C04BFF'); side.addColorStop(1, '#6A28D9');
+    ctx.fillStyle = side;
+    ctx.beginPath(); ctx.ellipse(pcx, floorY + pd, pw, ph, 0, 0, Math.PI); ctx.lineTo(pcx - pw, floorY); ctx.ellipse(pcx, floorY, pw, ph, 0, Math.PI, 0, true); ctx.closePath(); ctx.fill();
+    ctx.strokeStyle = '#FFD45C'; ctx.lineWidth = W * 0.09;
+    ctx.beginPath(); ctx.ellipse(pcx, floorY + pd * 0.5, pw, ph, 0, 0.05, Math.PI - 0.05); ctx.stroke();
+    const top = ctx.createLinearGradient(0, floorY - ph, 0, floorY + ph);
+    top.addColorStop(0, '#FFB3E6'); top.addColorStop(1, '#E66BD0');
+    ctx.fillStyle = top; ctx.beginPath(); ctx.ellipse(pcx, floorY, pw, ph, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = 'rgba(255,255,255,0.85)'; ctx.lineWidth = W * 0.07; ctx.stroke();
+    ctx.fillStyle = 'rgba(255,255,255,0.35)'; ctx.beginPath(); ctx.ellipse(pcx - pw * 0.25, floorY - ph * 0.35, pw * 0.45, ph * 0.22, 0, 0, Math.PI * 2); ctx.fill();
 
     const face = (x, topY, wink) => {
       const blink = !once && Math.sin(now / 260) > 0.985;

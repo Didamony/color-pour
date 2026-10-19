@@ -7,6 +7,10 @@
 
   // ---------- palettes ----------
   const PAL = {
+    home: {
+      day: { sky: ['#FF6EC4', '#B653FF', '#5B3DF5'], hills: ['#FFFFFF'], deco: '#FFFFFF' },
+      night: { sky: ['#6A1F9E', '#36157A', '#140A3D'], hills: ['#FFFFFF'], deco: '#FFFFFF' },
+    },
     cloud: {
       day: { sky: ['#FFE1F1', '#EADCFF', '#D6EBFF'], hills: ['#FFC4E1', '#D6C0FF', '#BDEBD9'], deco: '#FFFFFF' },
       night: { sky: ['#2B1752', '#1C1239', '#120C26'], hills: ['#4B2C7C', '#3A2467', '#2A1A4E'], deco: '#FFFFFF' },
@@ -62,6 +66,8 @@
         { x: w * 0.14, y: h * 0.72, r: Math.min(w, h) * 0.06, c: ['#7FE3FF', '#3B6EF5'], ring: false },
         { x: w * 0.7, y: h * 0.86, r: Math.min(w, h) * 0.035, c: ['#FFE07A', '#FF8C32'], ring: false },
       ] : [],
+      orbs: id === 'home' ? many(6, i => ({ x: r() * w, y: r() * h, r: Math.min(w, h) * (0.18 + r() * 0.2), p: r() * TAU, c: ['#FFD3F0', '#9FE8FF', '#FFE79A', '#C8B6FF'][i % 4] })) : [],
+      candy: id === 'home' ? many(Math.round(16 * area), i => ({ x: r() * w, y: r() * h, s: 6 + r() * 8, v: 8 + r() * 14, p: r() * TAU, k: i % 3, c: CANDY[i % CANDY.length] })) : [],
       palms: id === 'sunset' || id === 'desert' ? [{ x: w * (id === 'desert' ? 0.1 : 0.12), s: 1 }, { x: w * (id === 'desert' ? 0.9 : 0.88), s: 0.8 }] : [],
     };
     return s;
@@ -222,6 +228,7 @@
 
   function draw(ctx, w, h, id, night, t, s, dt) {
     const P = (PAL[id] || PAL.cloud)[night ? 'night' : 'day'];
+    if (id === 'home') { drawHome(ctx, w, h, night, t, s); return; }
     skyGrad(ctx, w, h, P.sky);
     const wrap = (v, max, pad) => ((v % (max + pad * 2)) + max + pad * 2) % (max + pad * 2) - pad;
 
@@ -342,6 +349,63 @@
       }
     }
     if (id !== 'ocean') for (const sp of s.sparkles) sparkle(ctx, sp.x, sp.y, sp.s, night ? '#FFFFFF' : (id === 'cloud' ? sp.c : '#FFFFFF'), (0.2 + 0.8 * Math.abs(Math.sin(t * 1.4 + sp.p))) * (night ? 0.7 : 0.85));
+  }
+
+  // Start screen: rich gradient, slowly turning light rays behind the title, glowing orbs and floating candy.
+  function drawHome(ctx, w, h, night, t, s) {
+    const P = PAL.home[night ? 'night' : 'day'];
+    const cx = w / 2, cy = Math.min(h * 0.27, 260);
+    const R = Math.hypot(w, h);
+    const bg = ctx.createRadialGradient(cx, cy, 0, cx, cy, R * 0.75);
+    bg.addColorStop(0, P.sky[0]); bg.addColorStop(0.45, P.sky[1]); bg.addColorStop(1, P.sky[2]);
+    ctx.fillStyle = bg; ctx.fillRect(0, 0, w, h);
+    // light rays
+    ctx.save();
+    ctx.translate(cx, cy);
+    ctx.rotate(t * 0.06);
+    const rays = 18;
+    for (let i = 0; i < rays; i++) {
+      ctx.rotate(TAU / rays);
+      const g = ctx.createLinearGradient(0, 0, R, 0);
+      g.addColorStop(0, night ? 'rgba(255,255,255,0.16)' : 'rgba(255,255,255,0.26)');
+      g.addColorStop(1, 'rgba(255,255,255,0)');
+      ctx.fillStyle = g;
+      ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(R, -R * 0.09); ctx.lineTo(R, R * 0.09); ctx.closePath(); ctx.fill();
+    }
+    ctx.restore();
+    // central glow
+    const glow = ctx.createRadialGradient(cx, cy, 0, cx, cy, Math.min(w, h) * 0.55);
+    glow.addColorStop(0, night ? 'rgba(255,190,240,0.45)' : 'rgba(255,240,250,0.7)');
+    glow.addColorStop(1, 'rgba(255,255,255,0)');
+    ctx.fillStyle = glow; ctx.fillRect(0, 0, w, h);
+    // big soft orbs drifting
+    for (const b of s.orbs) {
+      const x = b.x + Math.sin(t * 0.2 + b.p) * 30, y = b.y + Math.cos(t * 0.17 + b.p) * 24;
+      const g = ctx.createRadialGradient(x, y, 0, x, y, b.r);
+      g.addColorStop(0, b.c); g.addColorStop(1, 'rgba(255,255,255,0)');
+      ctx.globalAlpha = night ? 0.35 : 0.5; ctx.fillStyle = g;
+      ctx.beginPath(); ctx.arc(x, y, b.r, 0, TAU); ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+    // floating candy: drops, stars and hearts rising slowly
+    const wrap = (v, max, pad) => ((v % (max + pad * 2)) + max + pad * 2) % (max + pad * 2) - pad;
+    for (const c of s.candy) {
+      const y = wrap(c.y - t * c.v, h, 40), x = c.x + Math.sin(t * 0.7 + c.p) * 18;
+      ctx.save(); ctx.translate(x, y); ctx.rotate(Math.sin(t * 0.8 + c.p) * 0.5);
+      ctx.globalAlpha = 0.85; ctx.fillStyle = c.c;
+      const z = c.s;
+      if (c.k === 0) { ctx.beginPath(); ctx.moveTo(0, -z * 1.3); ctx.bezierCurveTo(z, -z * 0.2, z * 0.9, z, 0, z); ctx.bezierCurveTo(-z * 0.9, z, -z, -z * 0.2, 0, -z * 1.3); ctx.fill(); }
+      else if (c.k === 1) { ctx.beginPath(); for (let i = 0; i < 10; i++) { const rr = i % 2 ? z * 0.45 : z, a = -Math.PI / 2 + i * Math.PI / 5; ctx.lineTo(Math.cos(a) * rr, Math.sin(a) * rr); } ctx.closePath(); ctx.fill(); }
+      else { ctx.beginPath(); ctx.moveTo(0, z * 0.35); ctx.bezierCurveTo(-z * 1.1, -z * 0.35, -z * 0.45, -z * 1.05, 0, -z * 0.45); ctx.bezierCurveTo(z * 0.45, -z * 1.05, z * 1.1, -z * 0.35, 0, z * 0.35); ctx.fill(); }
+      ctx.fillStyle = 'rgba(255,255,255,0.6)'; ctx.beginPath(); ctx.arc(-z * 0.3, -z * 0.3, z * 0.18, 0, TAU); ctx.fill();
+      ctx.restore();
+    }
+    ctx.globalAlpha = 1;
+    for (const sp of s.sparkles) sparkle(ctx, sp.x, sp.y, sp.s * 1.2, '#FFFFFF', 0.3 + 0.7 * Math.abs(Math.sin(t * 1.5 + sp.p)));
+    // soft floor light
+    const fl = ctx.createLinearGradient(0, h * 0.7, 0, h);
+    fl.addColorStop(0, 'rgba(255,255,255,0)'); fl.addColorStop(1, night ? 'rgba(120,60,255,0.35)' : 'rgba(255,200,240,0.45)');
+    ctx.fillStyle = fl; ctx.fillRect(0, h * 0.7, w, h * 0.3);
   }
 
   // ---------- live background ----------
