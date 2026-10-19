@@ -438,7 +438,11 @@
   }
 
   function renderHome() {
-    el.logo.dataset.text = el.logo.textContent;
+    const words = t('appName').split(' ');
+    const title = words.length > 1 ? words[0] + '\n' + words.slice(1).join(' ') : words[0];
+    el.logo.textContent = title;
+    el.logo.dataset.text = title;
+    requestAnimationFrame(alignHome);
     el.playLevel.textContent = t('level', { n: S.data.level });
     const done = S.data.daily.doneDate === S.today();
     renderRoad();
@@ -451,113 +455,117 @@
 
   // little animated tubes on the home screen
   let heroRunning = false, heroCtx = null;
-  // Home hero: one tube pours into another on a loop, the filled tube gets its cork, then it starts over.
-  const HERO_MS = 4600;
+  // Start screen: the background photo is scaled so its glowing platform sits under the stage,
+  // and five tube characters stand on it, bobbing, blinking and now and then hopping.
+  const BG = { w: 940, h: 1672, px: 470, py: 1042, rx: 320 };
+  let homeFit = null;
+  function alignHome() {
+    const box = el.homeInner, bgEl = el.homeBg;
+    if (!box || !box.clientWidth) return;
+    const W = box.clientWidth, H = box.clientHeight;
+    const F = el.stage.offsetTop + el.stage.offsetHeight;
+    const s = Math.max(W / BG.w, H / BG.h, F / BG.py, (H - F) / (BG.h - BG.py));
+    const ox = W / 2 - BG.px * s, oy = F - BG.py * s;
+    bgEl.style.backgroundSize = BG.w * s + 'px ' + BG.h * s + 'px';
+    bgEl.style.backgroundPosition = ox + 'px ' + oy + 'px';
+    homeFit = { s, floor: F, cx: W / 2, rx: BG.rx * s, top: el.stage.offsetTop };
+  }
+
+  const CHARS = [
+    { dx: -2.45, a: -0.2, k: 0.8, layers: [7, 7, 7, 7], mood: 'smile' },
+    { dx: -1.3, a: -0.09, k: 0.9, layers: [3, 3, 4, 4], mood: 'laugh' },
+    { dx: 0, a: 0, k: 1.12, layers: [5, 2, 8, 8], mood: 'happy' },
+    { dx: 1.3, a: 0.09, k: 0.9, layers: [6, 6, 6, 6], mood: 'laugh' },
+    { dx: 2.45, a: 0.2, k: 0.8, layers: [1, 1, 2, 1], mood: 'smile' },
+  ];
+
+  function drawFace(ctx, W, mood, blink) {
+    const ink = '#24123F', ex = W * 0.2, ey = 0;
+    const eye = sx => {
+      if (blink || mood === 'laugh') {
+        ctx.strokeStyle = ink; ctx.lineWidth = W * 0.07; ctx.lineCap = 'round';
+        ctx.beginPath(); ctx.arc(sx, ey + W * 0.03, W * 0.09, Math.PI * 1.1, Math.PI * 1.9); ctx.stroke();
+        return;
+      }
+      ctx.fillStyle = '#FFFFFF';
+      ctx.beginPath(); ctx.ellipse(sx, ey, W * 0.13, W * 0.15, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = ink;
+      ctx.beginPath(); ctx.ellipse(sx, ey + W * 0.015, W * 0.1, W * 0.12, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#7A4CFF';
+      ctx.beginPath(); ctx.ellipse(sx, ey + W * 0.06, W * 0.07, W * 0.05, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#FFFFFF';
+      ctx.beginPath(); ctx.arc(sx + W * 0.04, ey - W * 0.045, W * 0.04, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.arc(sx - W * 0.035, ey + W * 0.05, W * 0.018, 0, Math.PI * 2); ctx.fill();
+    };
+    eye(-ex); eye(ex);
+    ctx.fillStyle = 'rgba(255,110,160,0.6)';
+    for (const sx of [-1, 1]) { ctx.beginPath(); ctx.ellipse(sx * W * 0.34, ey + W * 0.19, W * 0.09, W * 0.055, 0, 0, Math.PI * 2); ctx.fill(); }
+    if (mood === 'happy' || mood === 'laugh') {
+      ctx.fillStyle = ink;
+      ctx.beginPath(); ctx.moveTo(-W * 0.13, ey + W * 0.16); ctx.quadraticCurveTo(0, ey + W * 0.42, W * 0.13, ey + W * 0.16); ctx.closePath(); ctx.fill();
+      ctx.fillStyle = '#FF6B8F';
+      ctx.beginPath(); ctx.ellipse(0, ey + W * 0.27, W * 0.065, W * 0.04, 0, 0, Math.PI * 2); ctx.fill();
+    } else {
+      ctx.strokeStyle = ink; ctx.lineWidth = W * 0.055; ctx.lineCap = 'round';
+      ctx.beginPath(); ctx.arc(0, ey + W * 0.12, W * 0.1, 0.15 * Math.PI, 0.85 * Math.PI); ctx.stroke();
+    }
+  }
+
   function drawHero(once) {
     const c = el.hero;
     if (!c || el.home.hidden) return;
     const r = { width: c.clientWidth, height: c.clientHeight };
     if (!r.width) return;
-    const dpr = Math.min(window.devicePixelRatio || 1, 3);
-    if (c.width !== Math.round(r.width * dpr)) { c.width = Math.round(r.width * dpr); c.height = Math.round(r.height * dpr); }
+    if (!homeFit) alignHome();
+    if (!homeFit) return;
+    const dpr = Math.min(window.devicePixelRatio || 1, 2.5);
+    if (c.width !== Math.round(r.width * dpr) || c.height !== Math.round(r.height * dpr)) { c.width = Math.round(r.width * dpr); c.height = Math.round(r.height * dpr); }
     heroCtx = heroCtx || c.getContext('2d');
     const ctx = heroCtx;
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     ctx.clearRect(0, 0, r.width, r.height);
     const skin = S.data.equip.tube;
     const g = R.geometry(skin, 4);
-    const W = Math.min(r.height / (g.H + 2.1), r.width / 9);
-    const now = performance.now();
-    const k = once ? 0.82 : (now % HERO_MS) / HERO_MS;
+    const avail = homeFit.floor - homeFit.top;
+    const W = Math.max(14, Math.min(homeFit.rx * 2 / 6.3, avail / (g.H * 1.12 + 0.9)));
+    const now = once ? 0 : performance.now();
     const theme = game ? game.theme : {};
     const style = { skin, liquid: S.data.equip.liquid, symbols: false, theme, time: now };
-    const baseY = r.height - g.H * W - W * 1.25;
-    const cx = r.width / 2;
-    const ease = x => (x < 0.5 ? 2 * x * x : 1 - Math.pow(-2 * x + 2, 2) / 2);
-    const seg = (x, a0, a1) => Math.min(1, Math.max(0, (x - a0) / (a1 - a0)));
-    const fade = k < 0.06 ? k / 0.06 : k > 0.93 ? (1 - k) / 0.07 : 1;
-    ctx.globalAlpha = fade;
+    const floor = homeFit.floor - W * 0.1, cx = homeFit.cx;
 
-    const B = { x: cx + W * 0.35, y: baseY };
-    const Ahome = { x: cx - W * 1.9, y: baseY };
-    const poured = 2 * ease(seg(k, 0.3, 0.62));
-    const pourT = seg(k, 0.3, 0.62);
-    const moveIn = ease(seg(k, 0.14, 0.3)), moveOut = ease(seg(k, 0.62, 0.76));
-    const pose = th => {
-      const Lx = B.x - W * 0.16, Ly = B.y - W * 0.55;
-      return { x: Lx - (W / 2) * Math.cos(th), y: Ly - (W / 2) * Math.sin(th), a: th, Lx, Ly };
-    };
-    const th0 = Math.max(1.0, R.tiltFor(g, 4) + 0.04), th1 = Math.max(1.15, R.tiltFor(g, 2) + 0.1);
-    const pp = pose(th0 + (th1 - th0) * ease(pourT));
-    let ax, ay, aa;
-    if (k < 0.62) { ax = Ahome.x + (pp.x - Ahome.x) * moveIn; ay = Ahome.y + (pp.y - Ahome.y) * moveIn; aa = pp.a * moveIn; }
-    else { ax = pp.x + (Ahome.x - pp.x) * moveOut; ay = pp.y + (Ahome.y - pp.y) * moveOut; aa = pp.a * (1 - moveOut); }
-    const bob = once ? 0 : Math.sin(now / 700) * W * 0.06;
+    // coloured glow pools on the platform
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+    CHARS.forEach(ch => {
+      const col = R.liquidColor(style, ch.layers[0]);
+      const x = cx + ch.dx * W;
+      const gl = ctx.createRadialGradient(x, floor, 0, x, floor, W * 1.3);
+      gl.addColorStop(0, col + '88'); gl.addColorStop(1, col + '00');
+      ctx.fillStyle = gl;
+      ctx.beginPath(); ctx.ellipse(x, floor, W * 1.3, W * 0.45, 0, 0, Math.PI * 2); ctx.fill();
+    });
+    ctx.restore();
 
-    // spotlight and a round stage under the tubes
-    const floorY = baseY + g.H * W + W * 0.05;
-    const spot = ctx.createRadialGradient(cx + W * 0.2, floorY - g.H * W * 0.5, 0, cx + W * 0.2, floorY - g.H * W * 0.5, g.H * W * 1.1);
-    spot.addColorStop(0, 'rgba(255,255,255,0.45)'); spot.addColorStop(1, 'rgba(255,255,255,0)');
-    ctx.fillStyle = spot; ctx.fillRect(0, 0, r.width, r.height);
-    const pw = W * 3.6, ph = W * 0.55, pd = W * 0.42, pcx = cx + W * 0.25;
-    const side = ctx.createLinearGradient(0, floorY, 0, floorY + pd + ph / 2);
-    side.addColorStop(0, '#C04BFF'); side.addColorStop(1, '#6A28D9');
-    ctx.fillStyle = side;
-    ctx.beginPath(); ctx.ellipse(pcx, floorY + pd, pw, ph, 0, 0, Math.PI); ctx.lineTo(pcx - pw, floorY); ctx.ellipse(pcx, floorY, pw, ph, 0, Math.PI, 0, true); ctx.closePath(); ctx.fill();
-    ctx.strokeStyle = '#FFD45C'; ctx.lineWidth = W * 0.09;
-    ctx.beginPath(); ctx.ellipse(pcx, floorY + pd * 0.5, pw, ph, 0, 0.05, Math.PI - 0.05); ctx.stroke();
-    const top = ctx.createLinearGradient(0, floorY - ph, 0, floorY + ph);
-    top.addColorStop(0, '#FFB3E6'); top.addColorStop(1, '#E66BD0');
-    ctx.fillStyle = top; ctx.beginPath(); ctx.ellipse(pcx, floorY, pw, ph, 0, 0, Math.PI * 2); ctx.fill();
-    ctx.strokeStyle = 'rgba(255,255,255,0.85)'; ctx.lineWidth = W * 0.07; ctx.stroke();
-    ctx.fillStyle = 'rgba(255,255,255,0.35)'; ctx.beginPath(); ctx.ellipse(pcx - pw * 0.25, floorY - ph * 0.35, pw * 0.45, ph * 0.22, 0, 0, Math.PI * 2); ctx.fill();
-
-    const face = (x, topY, wink) => {
-      const blink = !once && Math.sin(now / 260) > 0.985;
-      const ey = topY, ex = W * 0.17;
-      ctx.fillStyle = '#2B1A4A';
-      for (const sx of [-1, 1]) {
-        if (blink || (wink && sx === 1)) {
-          ctx.lineWidth = W * 0.06; ctx.strokeStyle = '#2B1A4A'; ctx.lineCap = 'round';
-          ctx.beginPath(); ctx.moveTo(x + sx * ex - W * 0.07, ey); ctx.lineTo(x + sx * ex + W * 0.07, ey); ctx.stroke();
-        } else {
-          ctx.beginPath(); ctx.ellipse(x + sx * ex, ey, W * 0.075, W * 0.095, 0, 0, Math.PI * 2); ctx.fill();
-          ctx.fillStyle = '#FFFFFF';
-          ctx.beginPath(); ctx.arc(x + sx * ex + W * 0.025, ey - W * 0.035, W * 0.03, 0, Math.PI * 2); ctx.fill();
-          ctx.fillStyle = '#2B1A4A';
-        }
-      }
-      ctx.fillStyle = 'rgba(255,120,170,0.55)';
-      for (const sx of [-1, 1]) { ctx.beginPath(); ctx.ellipse(x + sx * W * 0.3, ey + W * 0.14, W * 0.08, W * 0.05, 0, 0, Math.PI * 2); ctx.fill(); }
-      ctx.strokeStyle = '#2B1A4A'; ctx.lineWidth = W * 0.05; ctx.lineCap = 'round';
-      ctx.beginPath(); ctx.arc(x, ey + W * 0.1, W * 0.1, 0.15 * Math.PI, 0.85 * Math.PI); ctx.stroke();
-    };
-
-    // a finished tube on each side for balance
-    R.drawTube(ctx, { id: 7, x: cx + W * 2.45, y: baseY + bob, angle: 0, W, layers: [{ c: 6, amt: 4 }], complete: true, corkT: 1 }, g, style);
-    face(cx + W * 2.45, baseY + bob + g.H * W * 0.55, false);
-    const done = k > 0.64;
-    const tb = R.drawTube(ctx, { id: 8, x: B.x, y: B.y, angle: 0, W, layers: [{ c: 0, amt: 2 + poured }], complete: done, corkT: Math.min(1, seg(k, 0.64, 0.74)) }, g, style);
-    face(B.x, B.y + g.H * W * 0.7, done && k < 0.86);
-    if (pourT > 0 && pourT < 1) {
-      ctx.fillStyle = R.liquidColor(style, 0);
-      R.roundRect(ctx, pp.Lx - W * 0.08, pp.Ly, W * 0.16, tb.topY - pp.Ly + 2, W * 0.08);
-      ctx.fill();
-    }
-    R.drawTube(ctx, { id: 9, x: ax, y: ay, angle: aa, W, layers: [{ c: 3, amt: 1 }, { c: 4, amt: 1 }, { c: 0, amt: Math.max(0, 2 - poured) }], complete: false, shadow: Math.abs(aa) < 0.2 }, g, style);
-    if (Math.abs(aa) < 0.05) face(ax, ay + g.H * W * 0.7, false);
-    if (done) {
-      const sk = seg(k, 0.64, 0.9);
-      for (let i = 0; i < 8; i++) {
-        const ang = (i / 8) * Math.PI * 2, d = W * (0.6 + sk * 1.4);
-        ctx.globalAlpha = fade * (1 - sk);
-        ctx.fillStyle = i % 2 ? '#FFD23F' : '#FFFFFF';
-        const sx = B.x + Math.cos(ang) * d, sy = B.y + W * 0.6 + Math.sin(ang) * d * 0.8, sz = W * 0.14;
-        ctx.beginPath(); ctx.moveTo(sx, sy - sz); ctx.lineTo(sx + sz * 0.3, sy); ctx.lineTo(sx, sy + sz); ctx.lineTo(sx - sz * 0.3, sy); ctx.closePath(); ctx.fill();
-      }
-      ctx.globalAlpha = 1;
-    }
-    ctx.globalAlpha = 1;
+    // draw the outer pairs first so the middle one overlaps them
+    const hopCycle = 5200, hopWho = Math.floor(now / hopCycle) % CHARS.length, hopK = (now % hopCycle) / 600;
+    [0, 4, 1, 3, 2].forEach(i => {
+      const ch = CHARS[i];
+      const Wi = W * ch.k;
+      const hop = i === hopWho && hopK < 1 ? Math.sin(hopK * Math.PI) * W * 0.5 : 0;
+      const bob = Math.sin(now / 650 + i * 1.4) * W * 0.05;
+      const sway = ch.a + Math.sin(now / 900 + i) * 0.025;
+      const bx = cx + ch.dx * W, by = floor - hop + bob;
+      const HW = g.H * Wi;
+      const px = bx + Math.sin(sway) * HW, py = by - Math.cos(sway) * HW;
+      R.drawTube(ctx, { id: 20 + i, x: px, y: py, angle: sway, W: Wi, layers: ch.layers.map(c2 => ({ c: c2, amt: 1, hidden: false })), complete: false, shadow: false }, g, style);
+      const fy = HW * 0.6;
+      ctx.save();
+      ctx.translate(px - Math.sin(sway) * fy, py + Math.cos(sway) * fy);
+      ctx.rotate(sway);
+      const blink = !once && ((now / 1000 + i * 0.83) % 3.6) < 0.13;
+      drawFace(ctx, Wi, i === 2 && hop > 0 ? 'happy' : ch.mood, blink);
+      ctx.restore();
+    });
   }
   function heroLoop() {
     if (!heroRunning) return;
@@ -1006,7 +1014,7 @@
       levelTitle: $('#level-title'), levelTag: $('#level-tag'), moves: $('#moves'),
       btnUndo: $('#btn-undo'), btnTube: $('#btn-tube'), btnHint: $('#btn-hint'), btnEmote: $('#btn-emote'),
       undoCount: $('#btn-undo .count'), tubeCount: $('#btn-tube .count'), hintCount: $('#btn-hint .count'),
-      home: $('#home'), hero: $('#hero'), logo: $('.logo'), playLevel: $('#play-level'),
+      home: $('#home'), hero: $('#hero'), logo: $('.logo'), homeInner: $('#home .home-inner'), homeBg: $('#home-bg'), stage: $('#stage'), playLevel: $('#play-level'),
       road: $('#road'), dailyBadge: $('#daily-badge'), wheelBadge: $('#wheel-badge'), giftDot: $('#gift-dot'),
       bubble: $('#bubble'), toast: $('#toast'),
     };
@@ -1025,9 +1033,10 @@
     applyTheme();
     applyStyle();
 
-    const ro = new ResizeObserver(() => { measure(); drawHero(true); });
+    const ro = new ResizeObserver(() => { measure(); alignHome(); drawHero(true); });
     ro.observe(el.app);
     ro.observe(el.topbar);
+    ro.observe(el.homeInner);
 
     CP.Duel.init({
       sheet, button, toast, coin, ICON, haptic,

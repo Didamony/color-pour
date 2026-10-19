@@ -3,6 +3,7 @@
 dist/color-pour.html  -> the playable web page (published as the shareable link)
 dist/www/index.html   -> the same game as a full HTML document, ready to wrap as an Android app
 """
+import base64
 import json
 import shutil
 from pathlib import Path
@@ -68,6 +69,8 @@ def bundle() -> str:
     page = (SRC / "index.html").read_text(encoding="utf-8")
     css = (SRC / "css" / "style.css").read_text(encoding="utf-8")
     js = "\n".join((SRC / "js" / f"{name}.js").read_text(encoding="utf-8") for name in JS_ORDER)
+    bg = base64.b64encode((SRC / "art" / "home-bg.jpg").read_bytes()).decode()
+    css = css.replace("/*@HOMEBG@*/", f'url("data:image/jpeg;base64,{bg}")')
     return page.replace("/*@CSS@*/", css).replace("/*@JS@*/", js)
 
 
