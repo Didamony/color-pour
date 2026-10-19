@@ -19,6 +19,7 @@ HEAD = f"""<title>{TITLE}</title>
 <meta name="theme-color" content="#B05CFF">
 <link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png">
 <link rel="icon" type="image/png" sizes="64x64" href="favicon-64.png">
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="manifest" href="manifest.webmanifest">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -33,9 +34,15 @@ HEAD = f"""<title>{TITLE}</title>
 <meta property="og:image:height" content="630">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:image" content="{SITE_URL}og-image.png">
+<script>
+if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {{
+  window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {{}}));
+}}
+</script>
 """
 
 MANIFEST = {
+    "id": "./",
     "name": TITLE,
     "short_name": "صبّ الألوان",
     "description": DESCRIPTION,
@@ -72,6 +79,7 @@ def main() -> None:
     www.mkdir(exist_ok=True)
     for f in (SRC / "assets").glob("*"):
         shutil.copy2(f, www / f.name)
+    shutil.copy2(SRC / "sw.js", www / "sw.js")
     (www / "manifest.webmanifest").write_text(json.dumps(MANIFEST, ensure_ascii=False, indent=2), encoding="utf-8")
     full = (
         '<!doctype html>\n<html lang="ar" dir="rtl">\n<head>\n<meta charset="utf-8">\n'
