@@ -80,6 +80,17 @@
     </div>
   </section>
 
+  <section class="screen map-screen" id="map" hidden>
+    <canvas id="map-canvas" aria-hidden="true"></canvas>
+    <div class="map-scroll" id="map-scroll"><div id="map-spacer"></div></div>
+    <header class="map-head">
+      <button class="gear-btn" id="map-back" data-icon="home" data-i18n-label="home"></button>
+      <h2 class="map-title" id="map-title">Color Journey</h2>
+      <div class="pill"><i class="pstar" aria-hidden="true">★</i><span class="num" id="map-stars">0</span></div>
+    </header>
+    <button class="level-btn map-play" id="map-play"><span id="map-play-label">Level 1</span></button>
+  </section>
+
   <div class="emote-layer" id="emote-layer" aria-live="polite"></div>
   <div class="emote-panel" id="emote-panel" hidden></div>
   <div class="toast" id="toast" role="status" aria-live="polite"></div>

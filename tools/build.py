@@ -62,7 +62,7 @@ MANIFEST = {
     ],
 }
 
-JS_ORDER = ["engine", "render", "i18n", "store", "audio", "ads", "game", "scene", "duel", "ui", "main"]
+JS_ORDER = ["engine", "render", "i18n", "store", "audio", "ads", "game", "scene", "duel", "map", "ui", "main"]
 
 
 def bundle() -> str:

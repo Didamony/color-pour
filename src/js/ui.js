@@ -1040,6 +1040,13 @@
     ro.observe(el.topbar);
     ro.observe(el.homeInner);
 
+    CP.Map.init({
+      toast, haptic,
+      startLevel: n => startLevel(n),
+      home: () => renderHome(),
+      refresh: () => { updateCoins(); renderHome(); updateHUD(); },
+    });
+
     CP.Duel.init({
       sheet, button, toast, coin, ICON, haptic,
       startBoard(lvl, round) {
@@ -1080,7 +1087,7 @@
     on('#coins-pill', () => openShop('boost'));
     on('#home-coins', () => openShop('boost'));
     on('#home-avatar', openSettings);
-    on('#home-stars-pill', openLevels);
+    on('#home-stars-pill', () => CP.Map.open());
     on('#tab-home', () => { el.home.querySelector('.logo-frame').animate([{ transform: 'scale(1)' }, { transform: 'scale(1.08)' }, { transform: 'scale(1)' }], { duration: 350 }); });
     on('#play-btn', () => startLevel(S.data.level));
     on('#tile-daily', () => {
@@ -1091,7 +1098,7 @@
     });
     on('#tile-wheel', openWheel);
     on('#tile-shop', () => openShop('tube'));
-    on('#tile-levels', openLevels);
+    on('#tile-levels', () => CP.Map.open());
     on('#tile-friends', () => CP.Duel.open());
     on('#gift-btn', () => openGift(false));
 

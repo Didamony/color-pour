@@ -40,6 +40,7 @@
       wheel: { freeDate: null, adDate: null, adCount: 0 },
       freeCoins: { date: null, count: 0 },
       daily: { doneDate: null },
+      mapRewards: {}, mapSeen: 1,
       play: null,
       seen: {},
     };

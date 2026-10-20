@@ -847,3 +847,35 @@ svg { display: block; }
 #home .stage { max-height: none; }
 #home .logo { line-height: 1.1; }
 #home .logo::before { background-size: 100% 1.1em; }
+
+/* ---------- color journey map ---------- */
+#map { --ui: #7B3FE4; --ui-deep: #4B1FA6; --ui-light: #A77BFF; --cream: #FFF4DC; z-index: 7; padding: 0; overflow: hidden; background: #FFC2E2; }
+#map canvas#map-canvas { position: absolute; left: 0; top: 0; z-index: 0; pointer-events: none; }
+.map-scroll { position: absolute; inset: 0; z-index: 1; overflow-y: auto; overflow-x: hidden; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+.map-scroll::-webkit-scrollbar { display: none; }
+#map-spacer { width: 1px; }
+.map-head {
+  position: absolute; top: 0; left: 0; right: 0; z-index: 2; display: flex; align-items: center; gap: 10px;
+  padding-top: calc(10px + env(safe-area-inset-top, 0px)); padding-bottom: 12px;
+  padding-left: max(14px, env(safe-area-inset-left, 0px)); padding-right: max(14px, env(safe-area-inset-right, 0px));
+  background: linear-gradient(180deg, #8F57FF 0%, #6A2FE0 70%, #5320C2 100%);
+  border-bottom: 3px solid #B48CFF; box-shadow: 0 6px 16px rgba(30, 10, 80, 0.35);
+}
+.map-head .gear-btn {
+  width: 46px; height: 46px; border-radius: 50%; flex: none; display: grid; place-items: center; color: #FFFFFF;
+  background: radial-gradient(circle at 35% 28%, rgba(255, 255, 255, 0.45) 0 14%, transparent 15%), linear-gradient(180deg, var(--ui-light), var(--ui));
+  border: 3px solid #FFFFFF; box-shadow: 0 4px 0 var(--ui-deep);
+}
+.map-head .gear-btn svg { width: 24px; height: 24px; }
+.map-title {
+  flex: 1; margin: 0; text-align: center; font-size: 26px; font-weight: 800; color: #FFE35C; line-height: 1.1;
+  text-shadow: 0 3px 0 #3A128F, 2px 0 0 #3A128F, -2px 0 0 #3A128F, 0 -2px 0 #3A128F;
+}
+.map-head .pill { flex: 0 0 auto; width: 96px; height: 36px; padding-inline: 30px 12px; font-size: 17px; }
+.map-head .pill .pstar { width: 38px; height: 38px; font-size: 22px; }
+#map .map-play {
+  position: absolute; z-index: 2; left: 50%; transform: translateX(-50%);
+  bottom: calc(18px + env(safe-area-inset-bottom, 0px)); width: min(70%, 300px) !important; height: 70px;
+}
+#map .map-play:active { transform: translateX(-50%) translateY(5px); }
+#map .map-play span { font-size: 30px; }
