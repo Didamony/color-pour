@@ -419,6 +419,7 @@
 
   // A short stretch of the level path: last finished level, the current one, and the next locked ones.
   function renderRoad() {
+    if (!el.road) return;
     const cur = S.data.level;
     const nums = [cur - 1, cur, cur + 1, cur + 2].filter(n => n >= 1);
     el.road.innerHTML = '';
@@ -446,6 +447,7 @@
     el.playLevel.textContent = t('level', { n: S.data.level });
     const done = S.data.daily.doneDate === S.today();
     renderRoad();
+    el.homeStars.textContent = Object.values(S.data.stars).reduce((a, b) => a + b, 0);
     el.dailyBadge.hidden = done;
     const w = S.wheelState();
     el.wheelBadge.hidden = !w.free;
@@ -527,7 +529,7 @@
     const skin = S.data.equip.tube;
     const g = R.geometry(skin, 4);
     const avail = homeFit.floor - homeFit.top;
-    const W = Math.max(14, Math.min(homeFit.rx * 2 / 6.3, avail / (g.H * 1.12 + 0.9)));
+    const W = Math.max(14, Math.min(homeFit.rx * 2 / 6.3, r.width / 6.9, 50, avail / (g.H * 1.12 + 0.9)));
     const now = once ? 0 : performance.now();
     const theme = game ? game.theme : {};
     const style = { skin, liquid: S.data.equip.liquid, symbols: false, theme, time: now };
@@ -1015,7 +1017,7 @@
       btnUndo: $('#btn-undo'), btnTube: $('#btn-tube'), btnHint: $('#btn-hint'), btnEmote: $('#btn-emote'),
       undoCount: $('#btn-undo .count'), tubeCount: $('#btn-tube .count'), hintCount: $('#btn-hint .count'),
       home: $('#home'), hero: $('#hero'), logo: $('.logo'), homeInner: $('#home .home-inner'), homeBg: $('#home-bg'), stage: $('#stage'), playLevel: $('#play-level'),
-      road: $('#road'), dailyBadge: $('#daily-badge'), wheelBadge: $('#wheel-badge'), giftDot: $('#gift-dot'),
+      road: $('#road'), homeStars: $('#home-stars'), dailyBadge: $('#daily-badge'), wheelBadge: $('#wheel-badge'), giftDot: $('#gift-dot'),
       bubble: $('#bubble'), toast: $('#toast'),
     };
     document.querySelectorAll('[data-icon]').forEach(n => { n.insertAdjacentHTML('afterbegin', ICON[n.dataset.icon]); });
@@ -1077,6 +1079,9 @@
     $('#btn-hint').addEventListener('click', doHint);
     on('#coins-pill', () => openShop('boost'));
     on('#home-coins', () => openShop('boost'));
+    on('#home-avatar', openSettings);
+    on('#home-stars-pill', openLevels);
+    on('#tab-home', () => { el.home.querySelector('.logo-frame').animate([{ transform: 'scale(1)' }, { transform: 'scale(1.08)' }, { transform: 'scale(1)' }], { duration: 350 }); });
     on('#play-btn', () => startLevel(S.data.level));
     on('#tile-daily', () => {
       if (S.data.daily.doneDate === S.today()) {
