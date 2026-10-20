@@ -1,4 +1,4 @@
-# Color Pour · صبّ الألوان
+# Color Lab · معمل الألوان
 
 A cute color-sorting puzzle in Arabic and English: pour liquids between tubes until every tube holds one color.
 

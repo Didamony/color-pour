@@ -5,7 +5,7 @@
 
   const dict = {
     en: {
-      appName: 'Color Pour',
+      appName: 'Color Lab',
       tagline: 'Pour, sort, relax',
       play: 'Play',
       level: 'Level {n}',
@@ -112,7 +112,7 @@
       phr_hi: 'Hi!', phr_gg: 'Good game!', phr_fast: 'Too fast for you', phr_wait: 'Wait for me!', phr_again: 'Again?', phr_wow: 'Wow!',
     },
     ar: {
-      appName: 'صبّ الألوان',
+      appName: 'معمل الألوان',
       tagline: 'اسكب، رتّب، واستمتع',
       play: 'العب',
       level: 'المستوى {n}',

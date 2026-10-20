@@ -62,9 +62,9 @@ window.draw = (kind, w, h) => {
     ctx.textAlign = 'center';
     ctx.shadowColor = 'rgba(60,20,120,0.35)'; ctx.shadowBlur = 18; ctx.shadowOffsetY = 6;
     ctx.font = '800 ' + Math.round(h * 0.2) + 'px "Baloo Bhaijaan 2", sans-serif';
-    ctx.fillText('صبّ الألوان', w * 0.7, h * 0.44);
+    ctx.fillText('معمل الألوان', w * 0.7, h * 0.44);
     ctx.font = '800 ' + Math.round(h * 0.13) + 'px "Baloo Bhaijaan 2", sans-serif';
-    ctx.fillText('Color Pour', w * 0.7, h * 0.64);
+    ctx.fillText('Color Lab', w * 0.7, h * 0.64);
     ctx.shadowBlur = 0; ctx.shadowOffsetY = 0;
     ctx.font = '800 ' + Math.round(h * 0.055) + 'px "Baloo Bhaijaan 2", sans-serif';
     ctx.fillStyle = 'rgba(255,255,255,0.9)';
@@ -78,7 +78,7 @@ window.draw = (kind, w, h) => {
   const browser = await chromium.launch();
   const p = await browser.newPage();
   await p.setContent(page, { waitUntil: 'networkidle' }).catch(() => {});
-  await p.evaluate(async () => { await document.fonts.load('800 60px "Baloo Bhaijaan 2"', 'صبّ الألوان Color Pour'); await document.fonts.ready; });
+  await p.evaluate(async () => { await document.fonts.load('800 60px "Baloo Bhaijaan 2"', 'معمل الألوان Color Lab'); await document.fonts.ready; });
   console.log('font loaded:', await p.evaluate(() => document.fonts.check('800 60px "Baloo Bhaijaan 2"', 'صب')));
   const jobs = [
     ['icon', 512, 512, 'icon-512.png'], ['icon', 192, 192, 'icon-192.png'], ['icon', 180, 180, 'apple-touch-icon.png'],

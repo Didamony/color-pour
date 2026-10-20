@@ -12,8 +12,8 @@ ROOT = Path(__file__).resolve().parent.parent
 SRC = ROOT / "src"
 DIST = ROOT / "dist"
 SITE_URL = "https://didamony.github.io/color-pour/"
-TITLE = "صبّ الألوان · Color Pour"
-DESCRIPTION = "لعبة ترتيب ألوان ممتعة: اسكب الألوان ورتّب كل لون في أنبوب. مستويات لا تنتهي، ومتجر، وهدية يومية، واللعب مع الأصدقاء."
+TITLE = "معمل الألوان · Color Lab"
+DESCRIPTION = "معمل الألوان: لعبة ترتيب ممتعة، اسكب الألوان ورتّب كل لون في أنبوب. مستويات لا تنتهي، ومتجر، وهدية يومية، واللعب مع الأصدقاء."
 
 HEAD = f"""<title>{TITLE}</title>
 <meta name="description" content="{DESCRIPTION}">
@@ -25,7 +25,7 @@ HEAD = f"""<title>{TITLE}</title>
 <link rel="manifest" href="manifest.webmanifest">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-title" content="صبّ الألوان">
+<meta name="apple-mobile-web-app-title" content="معمل الألوان">
 <meta property="og:type" content="website">
 <meta property="og:url" content="{SITE_URL}">
 <meta property="og:title" content="{TITLE}">
@@ -45,7 +45,7 @@ if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.
 MANIFEST = {
     "id": "./",
     "name": TITLE,
-    "short_name": "صبّ الألوان",
+    "short_name": "معمل الألوان",
     "description": DESCRIPTION,
     "start_url": "./",
     "scope": "./",
