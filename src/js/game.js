@@ -4,6 +4,8 @@
   const CP = root.CP = root.CP || {};
   const E = CP.Engine, R = CP.Render;
 
+  const PRAISE = ['praise1', 'praise2', 'praise3', 'praise4', 'praise5'];
+  const CELEB_MS = 1300;
   const MOVE_MS = 220, BACK_MS = 230, STREAM_LAG = 60, MIN_TILT = 1.0;
 
   function clamp(v, a, b) { return v < a ? a : v > b ? b : v; }
@@ -314,7 +316,7 @@
     vs.lift = 0;
     this.anims.push(a);
     const sfx = this.hooks.sfx || {};
-    sfx.pour && sfx.pour(amount, dstBefore.length / this.cap, a.pourMs);
+    sfx.pour && sfx.pour(amount, dstBefore.length / this.cap, a.pourMs + STREAM_LAG, this.cap, MOVE_MS);
     if (this.hooks.haptic) this.hooks.haptic(8);
     this.notifyMove();
   };
@@ -371,10 +373,15 @@
     if (E.isComplete(this.tubes[a.d], this.cap) && !vd.complete) {
       vd.complete = true;
       vd.corkT = 0;
+      vd.celebT = performance.now();
+      vd.celebColor = R.liquidColor(this.style, this.tubes[a.d][0]);
+      const n = this.vis.filter(v => v.complete).length;
+      vd.praise = PRAISE[(n - 1) % PRAISE.length];
       this.sparkle(a.d);
+      this.burst(a.d);
       const sfx = this.hooks.sfx || {};
-      sfx.complete && sfx.complete();
-      if (this.hooks.haptic) this.hooks.haptic(25);
+      sfx.complete && sfx.complete(n - 1);
+      if (this.hooks.haptic) this.hooks.haptic([14, 50, 28]);
     }
   };
 
@@ -581,8 +588,15 @@
           const e = t - v.shake;
           if (e > 360) v.shake = -1; else dx = Math.sin(e / 22) * v.W * 0.12 * (1 - e / 360);
         }
+        const celeb = v.celebT ? t - v.celebT : -1;
+        let bounce = 1;
+        if (celeb >= 0 && celeb < CELEB_MS) {
+          this.drawCelebrationBack(ctx, v, celeb);
+          const k = celeb / 520;
+          if (k < 1) bounce = 1 + 0.13 * Math.sin(k * Math.PI) * (1 - k * 0.4);
+        }
         const tv = {
-          id: i, x: v.x + dx, y: v.y, angle: v.angle, W: v.W, scale: R.easeOutBack(v.pop) || 0.01,
+          id: i, x: v.x + dx, y: v.y - (bounce - 1) * v.W * 2.2, angle: v.angle, W: v.W, scale: (R.easeOutBack(v.pop) || 0.01) * bounce,
           layers: this.layersFor(i, t), selected: this.selected === i, complete: v.complete, corkT: v.corkT,
         };
         const info = R.drawTube(ctx, tv, g, style);
@@ -590,7 +604,79 @@
         if (this.hintMove && (this.hintMove.src === i || this.hintMove.dst === i)) this.drawHintMark(ctx, v, i === this.hintMove.dst, hintPulse);
       }
     }
+    for (const v of this.vis) {
+      const celeb = v.celebT ? t - v.celebT : -1;
+      if (celeb >= 0 && celeb < CELEB_MS) this.drawCelebrationFront(ctx, v, celeb);
+    }
     this.drawParticles(ctx, dt);
+  };
+
+  // ---------- a tube is sealed: light, a ring, a word of praise ----------
+
+  Game.prototype.drawCelebrationBack = function (ctx, v, e) {
+    const W = v.W, g = this.geo, k = e / CELEB_MS;
+    const cx = v.homeX, cy = v.homeY + g.H * W * 0.5;
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+    ctx.globalAlpha = 1 - k;
+    const glow = ctx.createRadialGradient(cx, cy, 0, cx, cy, W * (1.6 + 1.4 * Math.min(1, k * 3)));
+    glow.addColorStop(0, v.celebColor + 'AA');
+    glow.addColorStop(1, v.celebColor + '00');
+    ctx.fillStyle = glow;
+    ctx.beginPath(); ctx.arc(cx, cy, W * 3, 0, Math.PI * 2); ctx.fill();
+    // turning light rays
+    ctx.translate(cx, cy);
+    ctx.rotate(e / 900);
+    const len = W * (1.4 + 2.2 * Math.min(1, k * 2.5));
+    for (let r = 0; r < 12; r++) {
+      ctx.rotate(Math.PI / 6);
+      const rg = ctx.createLinearGradient(0, 0, len, 0);
+      rg.addColorStop(0, 'rgba(255,255,255,0.55)'); rg.addColorStop(1, 'rgba(255,255,255,0)');
+      ctx.fillStyle = rg;
+      ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(len, -W * 0.18); ctx.lineTo(len, W * 0.18); ctx.closePath(); ctx.fill();
+    }
+    ctx.restore();
+  };
+
+  Game.prototype.drawCelebrationFront = function (ctx, v, e) {
+    const W = v.W, g = this.geo, k = e / CELEB_MS;
+    const cx = v.homeX, cy = v.homeY + g.H * W * 0.5;
+    // two light rings spreading out
+    for (const delay of [0, 0.14]) {
+      const kk = Math.max(0, Math.min(1, (k - delay) / 0.6));
+      if (kk <= 0 || kk >= 1) continue;
+      ctx.save();
+      ctx.globalAlpha = 1 - kk;
+      ctx.strokeStyle = delay ? v.celebColor : '#FFFFFF';
+      ctx.lineWidth = Math.max(1, W * 0.12 * (1 - kk));
+      ctx.beginPath(); ctx.ellipse(cx, cy, W * (0.7 + 1.5 * kk), g.H * W * (0.55 + 0.25 * kk), 0, 0, Math.PI * 2); ctx.stroke();
+      ctx.restore();
+    }
+    // a word of praise floating up from the cork
+    if (v.praise && CP.I18n) {
+      const size = W * 0.62 * (0.6 + 0.4 * R.easeOutBack(Math.min(1, e / 260)));
+      // float up from the cork, but never above the header
+      const y = Math.max(this.insets.top + size * 0.7, v.homeY - W * (1.1 + 0.9 * k));
+      ctx.save();
+      ctx.globalAlpha = k < 0.7 ? 1 : (1 - k) / 0.3;
+      ctx.font = '800 ' + Math.round(size) + 'px "Baloo Bhaijaan 2", system-ui, sans-serif';
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.lineJoin = 'round';
+      ctx.lineWidth = Math.max(3, size * 0.22); ctx.strokeStyle = '#2B1260';
+      const word = CP.I18n.t(v.praise);
+      ctx.strokeText(word, cx, y);
+      ctx.fillStyle = '#FFFFFF';
+      ctx.fillText(word, cx, y);
+      ctx.restore();
+    }
+  };
+
+  Game.prototype.burst = function (i) {
+    const v = this.vis[i], W = v.W;
+    const col = R.liquidColor(this.style, this.tubes[i][0]);
+    for (let k = 0; k < 26; k++) {
+      const ang = -Math.PI / 2 + (Math.random() - 0.5) * 2.2, sp = 160 + Math.random() * 260;
+      this.particles.push({ type: k % 3 ? 'confetti' : 'star', x: v.homeX, y: v.homeY - W * 0.2, vx: Math.cos(ang) * sp, vy: Math.sin(ang) * sp, g: 520, life: 0, max: 900 + Math.random() * 500, size: W * (0.12 + Math.random() * 0.1), color: k % 4 ? col : '#FFD23F', rot: Math.random() * 6, vr: (Math.random() - 0.5) * 12, wob: Math.random() * 6 });
+    }
   };
 
   // A rounded shelf under each row of tubes.
